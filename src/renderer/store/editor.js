@@ -666,7 +666,7 @@ const actions = {
   },
 
   // Open a new tab, optionally with content.
-  LISTEN_FOR_NEW_TAB ({ dispatch }) {
+  LISTEN_FOR_NEW_TAB ({ commit, state, dispatch }) {
     ipcRenderer.on('mt::open-new-tab', (e, markdownDocument, options = {}, selected = true) => {
       if (markdownDocument) {
         // Create tab with content.
@@ -680,6 +680,14 @@ const actions = {
     ipcRenderer.on('mt::new-untitled-tab', (e, selected = true, markdown = '') => {
       // Create a blank tab
       dispatch('NEW_UNTITLED_TAB', { markdown, selected })
+    })
+
+    ipcRenderer.on('mt::cursor_move', (e, cursor) => {
+      const { line, col } = cursor
+      const {
+        markdown
+      } = state.currentFile
+      bus.$emit('set-cursor', { markdown: markdown, line: line, col: col })
     })
   },
 
@@ -1136,7 +1144,7 @@ const actions = {
       const { pathname } = change
       const tab = tabs.find(t => isSamePathSync(t.pathname, pathname))
       if (tab) {
-        const { id, isSaved, filename } = tab
+        const { id, filename } = tab
         switch (type) {
           case 'unlink': {
             commit('SET_SAVE_STATUS_BY_TAB', { tab, status: false })
@@ -1158,27 +1166,12 @@ const actions = {
                 clearTimeout(timer)
                 autoSaveTimers.delete(id)
               }
-
               // Only reload the content if the tab is saved.
-              if (isSaved) {
-                commit('LOAD_CHANGE', change)
-                return
-              }
             }
-
-            commit('SET_SAVE_STATUS_BY_TAB', { tab, status: false })
-            commit('PUSH_TAB_NOTIFICATION', {
-              tabId: id,
-              msg: `"${filename}" has been changed on disk. Do you want to reload it?`,
-              showConfirm: true,
-              exclusiveType: 'file_changed',
-              action: status => {
-                if (status) {
-                  commit('LOAD_CHANGE', change)
-                }
-              }
-            })
-            break
+            // xiongkun: always reload when changes happen. may be
+            // dangerous, but we only use it as preview.
+            commit('LOAD_CHANGE', change)
+            return
           }
           default:
             console.error(`LISTEN_FOR_FILE_CHANGE: Invalid type "${type}"`)

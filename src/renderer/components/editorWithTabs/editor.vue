@@ -578,6 +578,7 @@ export default {
       bus.$on('insert-image', this.insertImage)
       bus.$on('image-uploaded', this.handleUploadedImage)
       bus.$on('file-changed', this.handleFileChange)
+      bus.$on('set-cursor', this.handleCursorChange)
       bus.$on('editor-blur', this.blurEditor)
       bus.$on('editor-focus', this.focusEditor)
       bus.$on('copyAsMarkdown', this.handleCopyPaste)
@@ -595,7 +596,9 @@ export default {
 
       this.editor.on('change', changes => {
         // WORKAROUND: "id: 'muya'"
-        this.$store.dispatch('LISTEN_FOR_CONTENT_CHANGE', Object.assign(changes, { id: 'muya' }))
+        // xiongkun: disable changes from muya. because we only want to 
+        // review.
+        // this.$store.dispatch('LISTEN_FOR_CONTENT_CHANGE', Object.assign(changes, { id: 'muya' }))
       })
 
       this.editor.on('format-click', ({ event, formatType, data }) => {
@@ -1077,6 +1080,24 @@ export default {
       }
     },
 
+    // listen for cursor changes.
+    handleCursorChange ({ markdown, line, col }) {
+      const { editor } = this
+      const cursor = {
+        anchor: {
+          line: line,
+          ch: col
+        },
+        focus: {
+          line: line,
+          ch: col
+        }
+      }
+      log.transports.file.file = '/Users/xiongkun03/project/marktext/log.txt'
+      editor.setMarkdown(markdown, cursor, true)
+      this.scrollToCursor(300)
+    },
+
     // listen for markdown change form source mode or change tabs etc
     handleFileChange ({ id, markdown, cursor, renderCursor, history }) {
       const { editor } = this
@@ -1132,6 +1153,7 @@ export default {
     bus.$off('insert-image', this.insertImage)
     bus.$off('image-uploaded', this.handleUploadedImage)
     bus.$off('file-changed', this.handleFileChange)
+    bus.$off('set-cursor', this.handleCursorChange)
     bus.$off('editor-blur', this.blurEditor)
     bus.$off('editor-focus', this.focusEditor)
     bus.$off('copyAsMarkdown', this.handleCopyPaste)

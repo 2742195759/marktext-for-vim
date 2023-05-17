@@ -425,6 +425,30 @@ class App {
     registerKeyboardListeners()
     registerSpellcheckerListeners()
 
+    // remote controller
+    const logger = require('electron-log')
+    // logger.transports.file.file = 'C:/Users/xiongkun/Desktop/linux/marktext/marktext/log.txt'
+    logger.info('start process remote controller.')
+    const {
+      Worker, MessageChannel
+    } = require('node:worker_threads')
+    console.log('start run main thread.')
+    // const worker = new Worker('C:/Users/xiongkun/Desktop/linux/marktext/controller.js')
+    const worker = new Worker('/Users/xiongkun03/project/marktext/controller.js')
+    const subChannel = new MessageChannel()
+    console.log('worker started.')
+    worker.postMessage({ hereIsYourPort: subChannel.port1 }, [subChannel.port1])
+    subChannel.port2.on('message', (value) => {
+      console.log('received:', value)
+      const editorWin = this._windowManager.getActiveWindow()
+      console.log('start send `mt::cursor_move` with: ', value.line, ' and ', value.col)
+      editorWin.browserWindow.webContents.send('mt::cursor_move', {
+        line: parseInt(value.line),
+        col: parseInt(value.col)
+      })
+    })
+    console.log('end server listening.')
+
     ipcMain.on('app-create-editor-window', () => {
       this._createEditorWindow()
     })
